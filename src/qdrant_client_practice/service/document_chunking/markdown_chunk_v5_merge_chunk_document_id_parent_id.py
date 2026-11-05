@@ -30,12 +30,13 @@ class ResumeChunkerV5():
                 title = first_line.lstrip("#").strip()
                 # header_path already ends with the separator ("/" or "/h1/h2/").
                 current_parent = node.metadata.get("header_path")
+                print(f"parent: {current_parent}")
                 parent_id = parent_map.get(current_parent)
                 if current_parent and parent_id:
                     node.metadata["parent_id"] = parent_id
-                new_title = node.metadata.get("header_path", "/") + "/" + title
-                print(new_title)
-                parent_map[new_title] = new_title
+                new_title = node.metadata.get("header_path", "/") + title
+                print(f"child: {new_title}\n\n")
+                parent_map[new_title+"/"] = node.id_
                 node.metadata["header_path"] = new_title
                 node.metadata["doc_id"] = DOC_ID.__str__()
                 node.set_content(body.strip())
