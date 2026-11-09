@@ -3,6 +3,7 @@ from llama_index.core.node_parser import MarkdownNodeParser, SentenceSplitter
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.schema import BaseNode
 from qdrant_client_practice.config.config import condif
+from qdrant_client_practice.static.docs_info import METADATA_SKIP_LIST
 from .port import DocumentChunker
 from qdrant_client_practice.static.docs_info import DOC_ID
 from pathlib import Path
@@ -30,18 +31,25 @@ class ResumeChunkerV5():
                 title = first_line.lstrip("#").strip()
                 # header_path already ends with the separator ("/" or "/h1/h2/").
                 current_parent = node.metadata.get("header_path")
-                print(f"parent: {current_parent}")
                 parent_id = parent_map.get(current_parent)
                 if current_parent and parent_id:
                     node.metadata["parent_id"] = parent_id
                 new_title = node.metadata.get("header_path", "/") + title
-                print(f"child: {new_title}\n\n")
                 parent_map[new_title+"/"] = node.id_
                 node.metadata["header_path"] = new_title
                 node.metadata["doc_id"] = DOC_ID.__str__()
+                node.excluded_embed_metadata_keys = METADATA_SKIP_LIST
                 node.set_content(body.strip())
-            if node.get_content():
-                result.append(node)
+            elif i != 0:
+                past_node = resume_nodes[i-1]
+                node.metadata["parent_id"] = past_node.metadata.get("parent_id")
+                node.metadata["header_path"] = past_node.metadata.get("header_path")
+                node.metadata["doc_id"] = past_node.metadata.get("doc_id")
+                node.excluded_embed_metadata_keys = past_node.excluded_embed_metadata_keys
+
+            # if node.get_content():
+            #     result.append(node) this way is skipping the some parent which can break the tree, need to find new way
+            result.append(node)
         return result
 
 def get_ingestion_pipeline() -> DocumentChunker:
